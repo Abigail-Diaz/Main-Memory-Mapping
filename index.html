@@ -219,6 +219,15 @@
         <span class="offset-label">(Offset)</span>
       `;
       output.appendChild(labelsDiv);
+      await sleep(500);
+
+  // Show Decimal Values
+  const pageDecimal = parseInt(pagePart || '0', 2);
+  const offsetDecimal = parseInt(offsetPart || '0', 2);
+
+  await addTypingText(output, `Page Number (Decimal): ${pageDecimal}`);
+  await sleep(500);
+  await addTypingText(output, `Offset (Decimal): ${offsetDecimal}`);
     }
   </script>
 
