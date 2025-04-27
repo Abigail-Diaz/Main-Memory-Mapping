@@ -3,15 +3,86 @@
   <head>
     <meta charset="UTF-8" />
     <title>Virtual to Physical Address Animation</title>
-    <style></style>
+    <style>
+      body {
+        font-family: "Courier New", Courier, monospace;
+        background-color: #080000;
+        color: #ffffff;
+        margin: 0;
+        padding: 20px;
+        text-align: center;
+      }
+      .reveal {
+        display: inline-block;
+        overflow: hidden;
+        white-space: nowrap;
+        border-right: 2px solid black; /* optional "typing" cursor */
+        animation: typing 3s steps(30, end) forwards;
+      }
+
+      @keyframes typing {
+        from {
+          width: 50%;
+        }
+        to {
+          width: 100%;
+        }
+      }
+    </style>
   </head>
   <body>
     <h1 style="text-align: center">Virtual to Physical Address Mapping</h1>
     <div class="container">
       <div class="card" id="infoCard">
-        <img src="CPU.jpg" alt="CPU Icon" style="width: 100px; height: 100px" />
+        <img src="CPU.PNG" alt="CPU Icon" style="width: 300px; height: 200px" />
+        <h1 style="text-align: center">CPU</h1>
+        <p style="text-align: center">Virtual Address</p>
+        <p style="text-align: center" id="virtual-address"></p>
+        <p style="text-align: center" id="page-size">Page Size: 4KB</p>
+        <p style="text-align: center">Page Table Base: 0x1000</p>
+        <p
+          style="text-align: center"
+          id="step-1"
+          data-text="1. Binary translation of Virtual Address"
+        ></p>
+        <p id="text" data-text="1010100101001001"></p>
       </div>
     </div>
-    <script></script>
+    <script>
+      const virtualAddress = 0x4b2c; // Example virtual address
+      const pageSize = 4096; // Example page size
+      const pageTableBase = 0x1000; // Example page table base address
+
+      document.getElementById("virtual-address").innerText = `0x${virtualAddress
+        .toString(16)
+        .toUpperCase()}`;
+      document.getElementById("page-size").innerText = `Page Size: ${
+        pageSize / 1024
+      }KB`;
+
+      function typeWriter(elementId, attributeName, speed) {
+        const element = document.getElementById(elementId);
+        const text = element.getAttribute(attributeName);
+        let index = 0;
+
+        function writeChar() {
+          if (index < text.length) {
+            element.innerHTML += text.charAt(index);
+            index++;
+            setTimeout(writeChar, speed);
+          }
+        }
+
+        writeChar();
+      }
+
+      // Start both typewriters
+      typeWriter("step-1", "data-text", 50);
+
+      // Delay the second one so they don't type at the exact same time
+      setTimeout(() => {
+        typeWriter("text", "data-text", 100);
+      }, 2000);
+    </script>
   </body>
 </html>
