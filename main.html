@@ -1,130 +1,226 @@
 <!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <title>Virtual to Physical Address Animation</title>
-    <style>
-      body {
-        font-family: "Courier New", Courier, monospace;
-        background-color: #080000;
-        color: #ffffff;
-        margin: 0;
-        padding: 20px;
-        text-align: center;
-      }
-      .reveal {
-        display: inline-block;
-        overflow: hidden;
-        white-space: nowrap;
-        border-right: 2px solid black; /* optional "typing" cursor */
-        animation: typing 3s steps(30, end) forwards;
-      }
+<head>
+  <meta charset="UTF-8" />
+  <title>Virtual to Physical Address Mapping</title>
+  <style>
+    body {
+      font-family: "Courier New", Courier, monospace;
+      background-color: #080000;
+      color: #ffffff;
+      padding: 20px;
+      text-align: center;
+    }
 
-      @keyframes typing {
-        from {
-          width: 50%;
-        }
-        to {
-          width: 100%;
-        }
-      }
-    </style>
-  </head>
-  <body>
-    <h1 style="text-align: center">Virtual to Physical Address Mapping</h1>
-    <div class="container">
-      <div class="card" id="infoCard">
-        <img src="CPU.PNG" alt="CPU Icon" style="width: 300px; height: 200px" />
-        <h1 style="text-align: center">CPU</h1>
-        <!-- Display virtual address -->
-        <p style="text-align: center">Virtual Address</p>
-        <p style="text-align: center" id="virtual-address"></p>
+    /* Green glowing card */
+    .card {
+      background: linear-gradient(145deg, #003300, #001a00);
+      border: 2px solid #00ff00;
+      border-radius: 15px;
+      padding: 30px;
+      max-width: 800px;
+      margin: 0 auto;
+      box-shadow: 0 0 20px #00ff00, 0 0 40px #00ff00;
+    }
 
-        <!-- Remove duplicate page-size here if not needed -->
-        <!-- <p style="text-align: center" id="page-size"></p> -->
+    /* Typing animation for dynamic text */
+    .typing {
+      display: inline-block;
+      overflow: hidden;
+      white-space: nowrap;
+      border-right: 2px solid #00ff00;
+      animation: typing 3s steps(40, end) forwards, blink 0.7s infinite;
+    }
 
-        <!-- Step 1 -->
-        <p
-          style="text-align: center"
-          id="step-1"
-          data-text="1. Binary translation of Virtual Address"
-        ></p>
-        <p id="text" data-text="1010100101001001"></p>
+    @keyframes typing {
+      from { width: 0; }
+      to { width: 100%; }
+    }
 
-        <!-- Step 2 -->
-        <p
-          style="text-align: center"
-          id="step-2"
-          data-text="2. Find page number and offset"
-        ></p>
-        <p style="text-align: center">Given page Size:</p>
-        <p id="page-size-breakdown" style="text-align: center"></p>
-      </div>
+    @keyframes blink {
+      0%, 100% { border-color: transparent; }
+      50% { border-color: #00ff00; }
+    }
+
+    /* Smooth fade-in for each block */
+    .section {
+      margin-top: 20px;
+      opacity: 0;
+      transition: opacity 1s ease-in-out;
+    }
+
+    .section.show {
+      opacity: 1;
+    }
+
+    /* CPU image */
+    .cpu-img {
+      width: 200px;
+      height: auto;
+      margin-bottom: 20px;
+    }
+
+    /* Inputs Styling */
+    input {
+      padding: 10px;
+      font-size: 16px;
+      width: 200px;
+      margin: 10px;
+      border: 1px solid #00ff00;
+      background-color: #001a00;
+      color: #00ff00;
+      border-radius: 5px;
+    }
+
+    button {
+      background-color: #003300;
+      color: #00ff00;
+      padding: 10px 20px;
+      margin-top: 10px;
+      border: 1px solid #00ff00;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+
+    button:hover {
+      background-color: #005500;
+    }
+
+    /* Binary split section */
+    .split-binary {
+      margin-top: 20px;
+      font-family: monospace;
+      word-spacing: 10px;
+      letter-spacing: 2px;
+    }
+
+    /* Colors for page bits and offset bits */
+    .page-bits {
+      color: lightgreen;
+    }
+
+    .offset-bits {
+      color: cyan;
+    }
+
+    /* Labels under split binary */
+    .labels {
+      margin-top: 10px;
+      font-style: italic;
+      font-size: 14px;
+      display: flex;
+      justify-content: center;
+      gap: 20px;
+      font-family: monospace;
+    }
+
+    /* Colored labels to match bits */
+    .labels span.page-label {
+      color: lightgreen;
+    }
+    .labels span.offset-label {
+      color: cyan;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="card" id="cpuCard">
+    <h1>CPU</h1>
+    <img src="CPU.png" alt="CPU" class="cpu-img">
+
+    <div class="section show">
+      <input type="text" id="virtualAddressInput" value="0x4B2C" placeholder="Enter Virtual Address">
+      <input type="number" id="pageSizeInput" value="4096" placeholder="Enter Page Size (bytes)">
+      <br>
+      <button onclick="startAnimation()">Start Mapping</button>
     </div>
-    <script>
-      const virtualAddress = 0x4b2c; // Example virtual address
-      const pageSize = 4096; // Example page size in bytes
-      const pageTableBase = 0x1000; // Example page table base address
 
-      document.getElementById("virtual-address").innerText = `0x${virtualAddress
-        .toString(16)
-        .toUpperCase()}`;
+    <div id="output"></div>
+  </div>
 
-      function typeWriter(elementId, attributeName, speed, callback = null) {
-        const element = document.getElementById(elementId);
-        const text = element.getAttribute(attributeName);
+  <script>
+    function sleep(ms) {
+      return new Promise(resolve => setTimeout(resolve, ms));
+    }
+
+    function addImmediateText(container, text) {
+      const p = document.createElement('p');
+      p.innerText = text;
+      container.appendChild(p);
+    }
+
+    function addTypingText(container, text) {
+      return new Promise(resolve => {
+        const p = document.createElement('p');
+        container.appendChild(p);
         let index = 0;
-
-        function writeChar() {
+        function typeChar() {
           if (index < text.length) {
-            element.innerHTML += text.charAt(index);
+            p.innerHTML += text.charAt(index);
             index++;
-            setTimeout(writeChar, speed);
+            setTimeout(typeChar, 30);
           } else {
-            if (callback) {
-              callback(); // Trigger next step
-            }
+            resolve();
           }
         }
-
-        writeChar();
-      }
-
-      // New: Typewriter for direct text input (no attribute)
-      function typeWriterText(elementId, text, speed, callback = null) {
-        const element = document.getElementById(elementId);
-        let index = 0;
-        element.innerHTML = ""; // Clear before starting
-
-        function writeChar() {
-          if (index < text.length) {
-            element.innerHTML += text.charAt(index);
-            index++;
-            setTimeout(writeChar, speed);
-          } else {
-            if (callback) {
-              callback();
-            }
-          }
-        }
-
-        writeChar();
-      }
-
-      // Start typing steps one by one
-      typeWriter("step-1", "data-text", 50, () => {
-        typeWriter("text", "data-text", 50, () => {
-          typeWriter("step-2", "data-text", 50, () => {
-            // After step-2 finishes, type the page size breakdown
-            const pageSizeKB = pageSize / 1024;
-            const bits = pageSize * 8;
-            const exponent = Math.log2(bits);
-            const breakdownText = `Page Size: ${pageSizeKB}KB → ${bits} bits → 2^${exponent} bits`;
-
-            typeWriterText("page-size-breakdown", breakdownText, 50);
-          });
-        });
+        typeChar();
       });
-    </script>
-  </body>
+    }
+
+    async function startAnimation() {
+      const virtualAddressInput = document.getElementById('virtualAddressInput').value.trim();
+      const pageSizeInput = parseInt(document.getElementById('pageSizeInput').value.trim(), 10);
+      const output = document.getElementById('output');
+      output.innerHTML = "";
+
+      let virtualAddress = virtualAddressInput.startsWith('0x') ?
+          parseInt(virtualAddressInput.slice(2), 16) :
+          parseInt(virtualAddressInput, 16);
+
+      const binaryAddress = virtualAddress.toString(2).padStart(16, '0'); 
+      const offsetBits = Math.log2(pageSizeInput);
+
+      // Display immediate info
+      addImmediateText(output, `Virtual Address Entered: ${virtualAddressInput}`);
+      addImmediateText(output, `Translated to Binary: ${binaryAddress}`);
+      await sleep(1000);
+
+      // Typing animations
+      await addTypingText(output, `Given Page Size: ${pageSizeInput / 1024}KB → ${pageSizeInput} bytes → 2^${offsetBits} bits`);
+      await sleep(500);
+
+      await addTypingText(output, `Offset Bits: ${offsetBits}`);
+      await sleep(500);
+
+      // Split Binary with colors
+      const offsetPart = binaryAddress.slice(-offsetBits);
+      const pagePart = binaryAddress.slice(0, binaryAddress.length - offsetBits);
+
+      await addTypingText(output, `Split Binary:`);
+
+      const splitDiv = document.createElement('div');
+      splitDiv.className = "split-binary";
+      splitDiv.innerHTML = `
+        <span class="page-bits">${pagePart}</span>
+        <span style="margin-left: 15px;"></span>
+        <span class="offset-bits">${offsetPart}</span>
+      `;
+      output.appendChild(splitDiv);
+
+      await sleep(500);
+
+      // Labels with spacing and colors
+      const labelsDiv = document.createElement('div');
+      labelsDiv.className = "labels";
+      labelsDiv.innerHTML = `
+        <span class="page-label">(Page Number Bits)</span>
+        <span style="margin-left: ${offsetPart.length * 10}px;"></span>
+        <span class="offset-label">(Offset)</span>
+      `;
+      output.appendChild(labelsDiv);
+    }
+  </script>
+
+</body>
 </html>
