@@ -36,31 +36,41 @@
       <div class="card" id="infoCard">
         <img src="CPU.PNG" alt="CPU Icon" style="width: 300px; height: 200px" />
         <h1 style="text-align: center">CPU</h1>
+        <!-- Display virtual address -->
         <p style="text-align: center">Virtual Address</p>
         <p style="text-align: center" id="virtual-address"></p>
-        <p style="text-align: center" id="page-size">Page Size: 4KB</p>
-        <p style="text-align: center">Page Table Base: 0x1000</p>
+
+        <!-- Remove duplicate page-size here if not needed -->
+        <!-- <p style="text-align: center" id="page-size"></p> -->
+
+        <!-- Step 1 -->
         <p
           style="text-align: center"
           id="step-1"
           data-text="1. Binary translation of Virtual Address"
         ></p>
         <p id="text" data-text="1010100101001001"></p>
+
+        <!-- Step 2 -->
+        <p
+          style="text-align: center"
+          id="step-2"
+          data-text="2. Find page number and offset"
+        ></p>
+        <p style="text-align: center">Given page Size:</p>
+        <p id="page-size-breakdown" style="text-align: center"></p>
       </div>
     </div>
     <script>
       const virtualAddress = 0x4b2c; // Example virtual address
-      const pageSize = 4096; // Example page size
+      const pageSize = 4096; // Example page size in bytes
       const pageTableBase = 0x1000; // Example page table base address
 
       document.getElementById("virtual-address").innerText = `0x${virtualAddress
         .toString(16)
         .toUpperCase()}`;
-      document.getElementById("page-size").innerText = `Page Size: ${
-        pageSize / 1024
-      }KB`;
 
-      function typeWriter(elementId, attributeName, speed) {
+      function typeWriter(elementId, attributeName, speed, callback = null) {
         const element = document.getElementById(elementId);
         const text = element.getAttribute(attributeName);
         let index = 0;
@@ -70,19 +80,51 @@
             element.innerHTML += text.charAt(index);
             index++;
             setTimeout(writeChar, speed);
+          } else {
+            if (callback) {
+              callback(); // Trigger next step
+            }
           }
         }
 
         writeChar();
       }
 
-      // Start both typewriters
-      typeWriter("step-1", "data-text", 50);
+      // New: Typewriter for direct text input (no attribute)
+      function typeWriterText(elementId, text, speed, callback = null) {
+        const element = document.getElementById(elementId);
+        let index = 0;
+        element.innerHTML = ""; // Clear before starting
 
-      // Delay the second one so they don't type at the exact same time
-      setTimeout(() => {
-        typeWriter("text", "data-text", 100);
-      }, 2000);
+        function writeChar() {
+          if (index < text.length) {
+            element.innerHTML += text.charAt(index);
+            index++;
+            setTimeout(writeChar, speed);
+          } else {
+            if (callback) {
+              callback();
+            }
+          }
+        }
+
+        writeChar();
+      }
+
+      // Start typing steps one by one
+      typeWriter("step-1", "data-text", 50, () => {
+        typeWriter("text", "data-text", 50, () => {
+          typeWriter("step-2", "data-text", 50, () => {
+            // After step-2 finishes, type the page size breakdown
+            const pageSizeKB = pageSize / 1024;
+            const bits = pageSize * 8;
+            const exponent = Math.log2(bits);
+            const breakdownText = `Page Size: ${pageSizeKB}KB → ${bits} bits → 2^${exponent} bits`;
+
+            typeWriterText("page-size-breakdown", breakdownText, 50);
+          });
+        });
+      });
     </script>
   </body>
 </html>
