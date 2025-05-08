@@ -232,7 +232,7 @@ const pageTable = [
 
     await addText(
       output,
-      `Page Size: ${pageSizeInput} bytes (2^${offsetBits} bits)`
+      `Page Size: ${pageSizeInput} bytes (2^${offsetBits} bytes)`
     );
     await sleep(500);
 
